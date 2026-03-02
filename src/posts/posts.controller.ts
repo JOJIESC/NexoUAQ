@@ -27,6 +27,17 @@ export class PostsController {
     return this.postsService.create(createPostDto, req.user.userId);
   }
 
+  // NUEVA RUTA: Listar mis proyectos
+  // Debe ir ANTES de @Get(':id') para evitar conflictos de ruteo
+  @Get('my-posts')
+  @UseGuards(AuthGuard('jwt')) // Protegemos la ruta
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar mis proyectos creados' })
+  findMyPosts(@Request() req) {
+    // Usamos el ID del token JWT
+    return this.postsService.findMyPosts(req.user.userId);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Listar todos los proyectos' })
   findAll() {

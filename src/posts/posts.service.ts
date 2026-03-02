@@ -35,4 +35,14 @@ export class PostsService {
     if (!post) throw new NotFoundException(`Proyecto ${id} no encontrado`);
     return post;
   }
+
+  // Buscar proyectos creados por un usuario específico
+  async findMyPosts(userId: string) {
+    return await this.postRepository.find({
+      where: { authorId: userId },
+      order: { createdAt: 'DESC' },
+      relations: ['author'], // Opcional: trae los datos del autor si los necesitas en el frontend
+    });
+  }
+  
 }
