@@ -102,14 +102,16 @@ export class UsersService {
     return { success: true };
   }
 
-  // 7. ELIMINAR CUENTA (Soft delete)
-  // El usuario queda marcado con deleted_at; las consultas normales lo ignoran.
-  // Sus posts y aplicaciones permanecen para no romper datos históricos.
+  // 7. ELIMINAR CUENTA (Soft delete vía is_active = false)
+  // No borramos físicamente para no romper relaciones de posts/applications
+  // que ya creó el usuario. La cuenta queda inhabilitada y no podrá iniciar
+  // sesión (auth.service debe verificar isActive al login).
   async deleteAccount(userId: string): Promise<{ success: boolean }> {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    await this.userRepository.softDelete(userId);
+    user.isActive = false;
+    await this.userRepository.save(user);
 
     return { success: true };
   }

@@ -1,15 +1,15 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
 
 interface CreateNotificationInput {
   userId: string;
   type: NotificationType;
   title: string;
-  message: string;
-  postId?: string;
-  applicationId?: string;
+  body: string;
+  /** ID del recurso relacionado (típicamente postId). */
+  referenceId?: string;
 }
 
 @Injectable()
@@ -24,7 +24,10 @@ export class NotificationsService {
    * Usado internamente por otros services (ej: applications).
    */
   async create(input: CreateNotificationInput): Promise<Notification> {
-    const notification = this.notificationRepo.create(input);
+    const notification = this.notificationRepo.create({
+      ...input,
+      isRead: false,
+    });
     return this.notificationRepo.save(notification);
   }
 
@@ -33,7 +36,7 @@ export class NotificationsService {
     return this.notificationRepo.find({
       where: {
         userId,
-        ...(onlyUnread ? { readAt: IsNull() } : {}),
+        ...(onlyUnread ? { isRead: false } : {}),
       },
       order: { createdAt: 'DESC' },
       take: 100,
@@ -43,7 +46,7 @@ export class NotificationsService {
   /** Cuenta de notificaciones no leídas (para badge). */
   async countUnread(userId: string): Promise<number> {
     return this.notificationRepo.count({
-      where: { userId, readAt: IsNull() },
+      where: { userId, isRead: false },
     });
   }
 
@@ -54,8 +57,8 @@ export class NotificationsService {
     if (notification.userId !== userId) {
       throw new ForbiddenException('No puedes marcar esta notificación');
     }
-    if (!notification.readAt) {
-      notification.readAt = new Date();
+    if (!notification.isRead) {
+      notification.isRead = true;
       await this.notificationRepo.save(notification);
     }
     return notification;
@@ -64,8 +67,8 @@ export class NotificationsService {
   /** Marca todas las notificaciones no leídas del usuario como leídas. */
   async markAllRead(userId: string): Promise<{ updated: number }> {
     const result = await this.notificationRepo.update(
-      { userId, readAt: IsNull() },
-      { readAt: new Date() },
+      { userId, isRead: false },
+      { isRead: true },
     );
     return { updated: result.affected ?? 0 };
   }
