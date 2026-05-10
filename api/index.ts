@@ -8,6 +8,10 @@
  * Para desarrollo local sigues usando `npm run start:dev` que arranca
  * `src/main.ts` como servidor tradicional.
  */
+// reflect-metadata DEBE ser el primer import para que los decoradores
+// de NestJS y class-validator funcionen en el cold-start de la function.
+import 'reflect-metadata';
+
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
