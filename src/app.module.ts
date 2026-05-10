@@ -9,6 +9,14 @@ import { AuthModule } from './auth/auth.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
+// Entities listadas explícitamente (en lugar de glob `__dirname + '/**/*.entity{.ts,.js}'`)
+// para que el bundler de @vercel/node las resuelva en serverless sin scanear filesystem
+// en runtime (lo cual fallaba al encontrar archivos .ts crudos en /var/task).
+import { User } from './users/entities/user.entity';
+import { Post } from './posts/entities/post.entity';
+import { Application } from './applications/entities/application.entity';
+import { Notification } from './notifications/entities/notification.entity';
+
 @Module({
   imports: [
     // 1. Configuración Global (.env)
@@ -27,7 +35,7 @@ import { NotificationsModule } from './notifications/notifications.module';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        entities: [User, Post, Application, Notification],
         // ⚠️ IMPORTANTE: 'synchronize: false' porque tú creaste la DB con SQL manual.
         // Si lo pones en true, TypeORM intentará cambiar tus tablas y puede borrar datos.
         synchronize: false,
