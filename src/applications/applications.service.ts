@@ -64,9 +64,8 @@ export class ApplicationsService {
         userId: post.authorId,
         type: NotificationType.APPLICATION_RECEIVED,
         title: 'Nueva postulación',
-        message: `${applicantName} se postuló a tu publicación "${post.title}"`,
-        postId: post.id,
-        applicationId: saved.id,
+        body: `${applicantName} se postuló a tu publicación "${post.title}"`,
+        referenceId: post.id,
       })
       .catch((err) => console.error('Error creando notificación:', err));
 
@@ -113,11 +112,10 @@ export class ApplicationsService {
           ? NotificationType.APPLICATION_ACCEPTED
           : NotificationType.APPLICATION_REJECTED,
         title: accepted ? 'Postulación aceptada' : 'Postulación rechazada',
-        message: accepted
+        body: accepted
           ? `Tu postulación a "${app.post.title}" fue aceptada 🎉`
           : `Tu postulación a "${app.post.title}" fue rechazada`,
-        postId: app.postId,
-        applicationId: app.id,
+        referenceId: app.postId,
       })
       .catch((err) => console.error('Error creando notificación:', err));
 

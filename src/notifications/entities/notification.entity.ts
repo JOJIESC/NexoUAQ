@@ -10,6 +10,11 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../../users/entities/user.entity';
 
+/**
+ * Tipos de notificación. Coincide con el código que se inserta en la columna
+ * `type` (string libre en la DB, pero usamos este enum como source of truth
+ * desde el código).
+ */
 export enum NotificationType {
   /** Alguien aplicó a uno de mis posts */
   APPLICATION_RECEIVED = 'APPLICATION_RECEIVED',
@@ -19,6 +24,19 @@ export enum NotificationType {
   APPLICATION_REJECTED = 'APPLICATION_REJECTED',
 }
 
+/**
+ * Mapea la tabla `notifications` que ya existe en la base.
+ *
+ * Schema real:
+ *   id              uuid PK
+ *   user_id         uuid → users(id)
+ *   title           varchar
+ *   body            text
+ *   reference_id    uuid (genérico — por ahora apunta al post)
+ *   type            varchar (usamos NotificationType como valores)
+ *   is_read         boolean
+ *   created_at      timestamp
+ */
 @Entity({ name: 'notifications' })
 export class Notification {
   @ApiProperty()
@@ -31,37 +49,30 @@ export class Notification {
   user: User;
 
   @Index()
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  @ApiProperty({ enum: NotificationType })
-  @Column({ type: 'enum', enum: NotificationType })
-  type: NotificationType;
-
-  /** Título corto para mostrar en UI */
   @ApiProperty({ example: 'Nueva postulación' })
-  @Column()
+  @Column({ type: 'varchar', length: 255, nullable: true })
   title: string;
 
-  /** Mensaje legible */
-  @ApiProperty({ example: 'Pedro Chávez se postuló a tu proyecto "Web App de hábitos"' })
-  @Column({ type: 'text' })
-  message: string;
+  @ApiProperty({ example: 'Pedro Chávez se postuló a tu proyecto "Web App"' })
+  @Column({ type: 'text', nullable: true })
+  body: string;
 
-  /** ID del post relacionado (para enlazar) */
+  /** ID del recurso relacionado (típicamente el post). */
   @ApiProperty({ required: false })
-  @Column({ name: 'post_id', nullable: true })
-  postId?: string;
+  @Column({ name: 'reference_id', type: 'uuid', nullable: true })
+  referenceId?: string;
 
-  /** ID de la application relacionada (para enlazar / mostrar contexto) */
-  @ApiProperty({ required: false })
-  @Column({ name: 'application_id', nullable: true })
-  applicationId?: string;
+  @ApiProperty({ enum: NotificationType })
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  type: NotificationType;
 
-  /** Cuando el usuario marcó la notificación como leída. Null = no leída. */
-  @ApiProperty({ required: false })
-  @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
-  readAt?: Date | null;
+  /** True cuando el usuario ya marcó la notificación como leída. */
+  @ApiProperty({ default: false })
+  @Column({ name: 'is_read', type: 'boolean', default: false, nullable: true })
+  isRead: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
