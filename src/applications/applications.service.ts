@@ -1,9 +1,16 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Application, ApplicationStatus } from './entities/application.entity';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { Post } from '../posts/entities/post.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class ApplicationsService {
@@ -12,6 +19,7 @@ export class ApplicationsService {
     private readonly appRepo: Repository<Application>,
     @InjectRepository(Post)
     private readonly postRepo: Repository<Post>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // 1. APLICAR A UN PROYECTO
@@ -27,7 +35,7 @@ export class ApplicationsService {
 
     // C. Verificar si ya aplicó antes
     const existing = await this.appRepo.findOne({
-      where: { postId, applicantId }
+      where: { postId, applicantId },
     });
     if (existing) throw new BadRequestException('Ya has aplicado a este proyecto');
 
@@ -38,7 +46,31 @@ export class ApplicationsService {
       message: dto.message,
     });
 
-    return await this.appRepo.save(application);
+    const saved = await this.appRepo.save(application);
+
+    // E. Notificar al dueño del post
+    // Cargamos la app con el applicant (eager: true) para obtener su nombre
+    const withApplicant = await this.appRepo.findOne({
+      where: { id: saved.id },
+      relations: ['applicant'],
+    });
+    const applicantName = withApplicant?.applicant
+      ? `${withApplicant.applicant.name} ${withApplicant.applicant.lastname}`.trim()
+      : 'Un estudiante';
+
+    // No bloqueamos la respuesta si la notificación falla
+    this.notificationsService
+      .create({
+        userId: post.authorId,
+        type: NotificationType.APPLICATION_RECEIVED,
+        title: 'Nueva postulación',
+        message: `${applicantName} se postuló a tu publicación "${post.title}"`,
+        postId: post.id,
+        applicationId: saved.id,
+      })
+      .catch((err) => console.error('Error creando notificación:', err));
+
+    return saved;
   }
 
   // 2. VER CANDIDATOS (Solo para el dueño del proyecto)
@@ -70,6 +102,25 @@ export class ApplicationsService {
     }
 
     app.status = status;
-    return await this.appRepo.save(app);
+    const saved = await this.appRepo.save(app);
+
+    // Notificar al postulante del cambio de estado
+    const accepted = status === ApplicationStatus.ACCEPTED;
+    this.notificationsService
+      .create({
+        userId: app.applicantId,
+        type: accepted
+          ? NotificationType.APPLICATION_ACCEPTED
+          : NotificationType.APPLICATION_REJECTED,
+        title: accepted ? 'Postulación aceptada' : 'Postulación rechazada',
+        message: accepted
+          ? `Tu postulación a "${app.post.title}" fue aceptada 🎉`
+          : `Tu postulación a "${app.post.title}" fue rechazada`,
+        postId: app.postId,
+        applicationId: app.id,
+      })
+      .catch((err) => console.error('Error creando notificación:', err));
+
+    return saved;
   }
 }

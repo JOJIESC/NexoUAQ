@@ -3,12 +3,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-// Importaremos el módulo de usuarios más adelante
-// import { UsersModule } from './users/users.module';
 import { UsersModule } from './users/users.module';
 import { PostsModule } from './posts/posts.module';
 import { AuthModule } from './auth/auth.module';
 import { ApplicationsModule } from './applications/applications.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -31,20 +30,16 @@ import { ApplicationsModule } from './applications/applications.module';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         // ⚠️ IMPORTANTE: 'synchronize: false' porque tú creaste la DB con SQL manual.
         // Si lo pones en true, TypeORM intentará cambiar tus tablas y puede borrar datos.
-        synchronize: false, 
+        synchronize: false,
         ssl: { rejectUnauthorized: false }, // Necesario para AWS RDS
       }),
     }),
 
     UsersModule,
-
     PostsModule,
-
     AuthModule,
-
     ApplicationsModule,
-    
-    // UsersModule, (Lo crearemos en el paso 5)
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
